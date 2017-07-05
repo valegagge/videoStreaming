@@ -1,0 +1,71 @@
+GSTREAMER PIPELINE COMMANDS
+
+NOTE 1: use v4l2-ctl command to list camera devices and their capabilities. Some example have been done with logitech while others with R1 cameras, and they have different capabilities.
+
+NOTE 2: use fpsdisplaysink name=fpssink text-overlay=false video-sink=autovideosink signal-fps-measurements=true to measure frame per seconds
+
+NOTE 3: foe decode h264 stream use avdec_h264 on linux and openh264dec on windows
+
+
+1) simplest example: read video from Logitech camera and show it on local pc. Note the sink is available only on tx2. If you are on pc you need autovideosink. only on tx2. If you are on pc you need autovideosink.
+
+gst-launch-1.0 v4l2src device="/dev/video1" ! "video/x-raw, width=640, height=480, format=(string)I420" ! xvimagesink -e
+
+
+
+
+
+2) use video test source to encode h264 and decode it and then visualize (this command works on tx2 only)
+gst-launch-1.0 -v videotestsrc ! 'video/x-raw, format=(string)I420, width=(int)640, height=(int)480' ! omxh264enc ! h264parse ! omxh264dec ! nveglglessink -e
+
+following command works on WIN pc:
+gst-launch-1.0 -v videotestsrc ! 'video/x-raw, format=(string)I420, width=(int)640, height=(int)480' ! openh264enc ! h264parse ! openh264dec! autovideosink -e
+
+following command works on linux pc:
+gst-launch-1.0 -v videotestsrc ! 'video/x-raw, format=(string)I420, width=(int)640, height=(int)480' ! x264enc ! h264parse ! avdec_h264 ! autovideosink -e
+
+
+3)example of streaming server running on tx2 and client on pc
+SERVER: gst-launch-1.0 -v v4l2src device="/dev/video1" ! "video/x-raw, width=640, height=480, format=(string)I420" ! omxh264enc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink host=10.255.35.107 port=58234
+
+CLIENT: gst-launch-1.0 -vvv udpsrc port=58234 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, packetization-mode=(string)1, profile-level-id=(string)424034, payload=(int)96, ssrc=(uint)3541606450, timestamp-offset=(uint)3328419602, seqnum-offset=(uint)1058, a-framerate=(string)30" ! rtph264depay ! h264parse ! omxh264dec ! nveglglessink -e
+
+
+
+
+4) example of streaming (IN MULTICAST)  server running on tx2 and client on pc
+SERVER: gst-launch-1.0 -v v4l2src device="/dev/video1" ! "video/x-raw, width=640, height=480, format=(string)I420" ! omxh264enc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink host=224.0.0.1 auto-multicast=true  port=3000
+
+CLIENT:  gst-launch-1.0 -vvv udpsrc multicast-group=224.0.0.1 auto-multicast=true port=3000 caps="application/x-rtp, media=(string)video,  encoding-name=(string)H264, payload=(int)96,  a-framerate=(string)30" ! rtph264depay ! h264parse ! avdec_h264 ! autovideosink -e
+
+
+
+
+
+5) example of streaming with mpeg4
+SERVER: gst-launch-1.0 -v v4l2src device="/dev/video1" ! "video/x-raw, width=640, height=480, format=(string)I420" ! avenc_mpeg4 ! rtpmp4vpay pt=96 config-interval=5 ! udpsink host=224.0.0.1 auto-multicast=true  port=3000
+
+CLIENT: gst-launch-1.0 -v udpsrc multicast-group=224.0.0.1 auto-multicast=true port=3000 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)MP4V-ES, payload=(int)96, a-framerate=(string)30" ! rtpmp4vdepay !  mpeg4videoparse ! avdec_mpeg4! fpsdisplaysink name=fpssink text-overlay=false video-sink=autovideosink signal-fps-measurements=true -v
+
+
+
+
+
+6) STREAMING CON VIDEO SCALING
+SERVER : gst-launch-1.0 -vvv v4l2src device="/dev/video1" ! "video/x-raw, width=2560, height=720, format=(string)I420" ! nvvidconv  ! 'video/x-raw(memory:NVMM), width=(int)640, height=(int)480, format=(string)I420' ! omxh264enc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink host=224.0.0.1 auto-multicast=true  port=3000
+
+CLIENT: gst-launch-1.0 -vvv udpsrc multicast-group=224.0.0.1 auto-multicast=true port=3000 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96, a-framerate=(string)30" ! rtph264depay ! h264parse ! avdec_h264! autovideosink -e
+
+
+
+
+
+7) STRAEMING CON CLINT CON YARP
+SERVER: gst-launch-1.0 -vvv v4l2src device="/dev/video1" ! "video/x-raw, width=2560, height=720, format=(string)I420" ! omxh264enc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink host=224.0.0.1 auto-multicast=true  port=3000
+
+CLIENT: gst-launch-1.0 -vvv udpsrc multicast-group=224.0.0.1 auto-multicast=true port=3000 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264" ! rtph264depay ! h264parse ! avdec_h264! videoconvert ! 'video/x-raw, format=(string)RGB'  ! yarpdevice ! fpsdisplaysink name=fpssink text-overlay=false video-sink=glimagesink signal-fps-measurements=true
+
+
+
+8) bayer format (works on pc)
+gst-launch-1.0 -vvv videotestsrc ! 'video/x-bayer, width=(int)1920, height=(int)1080, format=(string)rggb, framerate=(fraction)30/1' ! bayer2rgb  ! glimagesink

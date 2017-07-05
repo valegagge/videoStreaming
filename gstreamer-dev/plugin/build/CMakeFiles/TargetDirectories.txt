@@ -1,0 +1,5 @@
+/home/icub/videoStreaming_repository/gstreamer-dev/plugin/build/CMakeFiles/edit_cache.dir
+/home/icub/videoStreaming_repository/gstreamer-dev/plugin/build/CMakeFiles/rebuild_cache.dir
+/home/icub/videoStreaming_repository/gstreamer-dev/plugin/build/src/CMakeFiles/edit_cache.dir
+/home/icub/videoStreaming_repository/gstreamer-dev/plugin/build/src/CMakeFiles/rebuild_cache.dir
+/home/icub/videoStreaming_repository/gstreamer-dev/plugin/build/src/CMakeFiles/gstyarpdevice.dir
