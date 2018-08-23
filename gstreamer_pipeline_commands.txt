@@ -69,3 +69,19 @@ CLIENT: gst-launch-1.0 -vvv udpsrc multicast-group=224.0.0.1 auto-multicast=true
 
 8) bayer format (works on pc)
 gst-launch-1.0 -vvv videotestsrc ! 'video/x-bayer, width=(int)1920, height=(int)1080, format=(string)rggb, framerate=(fraction)30/1' ! bayer2rgb  ! glimagesink
+
+
+-----------------------SU 4 G --------------------------------------------------
+--------------------------------------------------------------------------------
+
+4g buffers packets so we need that server sends with constant rate and client use jitterBuffer plugin to remove the jitter.
+
+PRIMA LANCIARE IL CLIENT E POI IL SERVER
+CLIENT:
+gst-launch-1.0 -vvv udpsrc port=33000 caps="application/x-rtp, media=(string)video,  encoding-name=(string)H264, payload=(int)96,  a-framerate=(string)30" ! rtpjitterbuffer ! rtph264depay ! h264parse ! avdec_h264 ! autovideosink -e
+
+SERVER:
+gst-launch-1.0 -v v4l2src device="/dev/video0" ! "video/x-raw, width=1280, height=480, format=(string)I420, framerate=(fraction)30/1" ! omxh264enc  control-rate=2 bitrate=5000000 !  "video/x-h264, stream-format=(string)byte-stream, bitrate=5000000" ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink host=192.168.200.3 port=33000
+
+--------------------------------------------------------------------------------
+
